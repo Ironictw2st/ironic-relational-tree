@@ -1,7 +1,18 @@
 <div class="tree-viewer-header">
   <button class="back-to-list"><i class="fas fa-arrow-left"></i> Back to List</button>
   <h2>{{tree.name}}</h2>
-  <div class="help-text">Drag actors from the sidebar onto the canvas</div>
+  <div class="header-right">
+    {{#if isGM}}
+    <button class="show-to-players" title="Show to Players">
+      <i class="fas fa-eye"></i>
+    </button>
+    <button class="add-map-note" title="Add Map Note">
+      <i class="fas fa-map-marker-alt"></i>
+    </button>
+    {{/if}}
+    <button class="add-custom-node"><i class="fas fa-user-plus"></i> Add Custom</button>
+    <span class="help-text">Drag actors from the sidebar onto the canvas</span>
+  </div>
 </div>
 
 <div class="tree-canvas" style="min-height: 600px;">
@@ -10,6 +21,10 @@
   <!-- Legend -->
   <div class="tree-legend">
     <div class="legend-title">Relationships</div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #800000;"></span>
+      <span class="legend-label">Rival</span>
+    </div>
     <div class="legend-item">
       <span class="legend-line" style="background-color: #ff4444;"></span>
       <span class="legend-label">Enemy</span>
@@ -23,6 +38,10 @@
       <span class="legend-label">Friendly</span>
     </div>
     <div class="legend-item">
+      <span class="legend-line" style="background-color: #00FFFF;"></span>
+      <span class="legend-label">Alliance</span>
+    </div>
+    <div class="legend-item">
       <span class="legend-line" style="background-color: #aa44ff;"></span>
       <span class="legend-label">Family</span>
     </div>
@@ -30,26 +49,24 @@
       <span class="legend-line" style="background-color: #ff69b4;"></span>
       <span class="legend-label">Romantic</span>
     </div>
-    <div class="legend-item">
-      <span class="legend-line" style="background-color: #800000;"></span>
-      <span class="legend-label">Rival</span>
-    </div>
-    <div class="legend-item">
-      <span class="legend-line" style="background-color: #00FFFF;"></span>
-      <span class="legend-label">Alliance</span>
-    </div>
   </div>
   
   {{#each nodes}}
-  <div class="tree-node" data-node-id="{{this.id}}" style="left: {{this.x}}px; top: {{this.y}}px;">
+  <div class="tree-node {{#if this.isCustom}}custom-node{{/if}}" data-node-id="{{this.id}}" style="left: {{this.x}}px; top: {{this.y}}px;">
     <div class="node-controls">
       <button class="remove-node" title="Remove"><i class="fas fa-times"></i></button>
+      {{#if this.isCustom}}
+      <button class="edit-node" title="Edit"><i class="fas fa-edit"></i></button>
+      {{/if}}
       <button class="connect-node" title="Connect"><i class="fas fa-link"></i></button>
       <button class="resize-larger" title="Larger"><i class="fas fa-plus"></i></button>
       <button class="resize-smaller" title="Smaller"><i class="fas fa-minus"></i></button>
     </div>
     <img src="{{this.actorImg}}" alt="{{this.actorName}}" style="width: {{this.size}}px; height: {{this.size}}px;" />
     <span class="actor-name" style="font-size: {{this.fontSize}}px; max-width: {{this.nameMaxWidth}}px;">{{this.actorName}}</span>
+    {{#if this.isCustom}}
+    <span class="custom-badge" title="Custom Node"><i class="fas fa-star"></i></span>
+    {{/if}}
   </div>
   {{/each}}
 </div>
@@ -64,6 +81,62 @@
   gap: 1rem;
 }
 
+.tree-viewer-header h2 {
+  margin: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.show-to-players,
+.add-map-note {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-btn);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.show-to-players:hover {
+  background: #44ff44;
+  border-color: #44ff44;
+  color: black;
+}
+
+.add-map-note:hover {
+  background: #000000;
+  border-color: #000000;
+  color: white;
+}
+
+.add-custom-node {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.75rem;
+  background: #000000;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.add-custom-node:hover {
+  filter: brightness(1.1);
+}
+
 .help-text {
   color: var(--color-text-dark-secondary);
   font-size: 0.9em;
@@ -75,7 +148,6 @@
   width: 100%;
   height: 600px;
   background: var(--color-bg-option);
-  border: 1px solid var(--color-border-dark);
   overflow: auto;
 }
 
@@ -149,11 +221,11 @@
   align-items: center;
   padding: 0.5rem;
   background: var(--color-bg-btn);
+  border: none;
   border-radius: 8px;
   cursor: move;
   z-index: 10;
   user-select: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .tree-node.dragging {
@@ -162,14 +234,8 @@
 }
 
 .tree-node.connecting {
-  border-color: var(--color-text-hyperlink);
-  box-shadow: 0 0 10px var(--color-text-hyperlink);
+  box-shadow: 0 0 10px #000000;
   cursor: pointer;
-}
-
-.tree-node.hover {
-    border-color: var(--color-border-highlight); 
-
 }
 
 .node-controls {
@@ -194,6 +260,14 @@
   height: 24px;
   padding: 0;
   font-size: 0.8em;
+  border: none;
+  background: var(--color-bg-option);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.node-controls button:hover {
+  background: var(--color-bg-option-hover);
 }
 
 .tree-node img {
@@ -209,6 +283,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.custom-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  background: #000000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.6em;
+  border: none;
 }
 
 /* Connection Type Picker */
@@ -238,7 +328,7 @@
   margin: 0.25rem 0;
   text-align: left;
   background: var(--color-bg-option);
-  border: 1px solid var(--color-border-dark);
+  border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;
@@ -294,7 +384,7 @@
   margin: 0.25rem 0;
   text-align: left;
   background: var(--color-bg-option);
-  border: 1px solid var(--color-border-dark);
+  border: none;
   border-radius: 4px;
   cursor: pointer;
   transition: background 0.2s;
@@ -320,5 +410,23 @@
   height: 3px;
   border-radius: 2px;
   flex-shrink: 0;
+}
+
+/* Open Tree Button in Journal */
+.open-tree-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #000000;
+  border: none;
+  border-radius: 4px;
+  color: white;
+  cursor: pointer;
+  margin: 1rem 0;
+}
+
+.open-tree-btn:hover {
+  filter: brightness(1.1);
 }
 </style>

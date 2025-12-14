@@ -32,5 +32,9 @@
       }
     ]
   },
-  "description": ""
+  "socket": true,
+  "description": "<p>This module allows for the usage of relational trees to display certain things like, family trees, factions relational, and general relations between actors. </p>",
+  "url": "https://github.com/Ironictw2st/ironic-relational-tree/",
+  "manifest": "https://github.com/Ironictw2st/ironic-relational-tree/releases/download/Prerelease/module.json",
+  "download": "https://github.com/Ironictw2st/ironic-relational-tree/releases/download/Prerelease/ironic-relational-tree.zip"
 }

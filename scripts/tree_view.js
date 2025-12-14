@@ -21,11 +21,11 @@ class TreeViewer extends Application {
   }
 
   static CONNECTION_TYPES = {
-    rival: {color: '#800000', label: 'Rival'},
+    rival: { color: '#800000', label: 'Rival' },
     enemy: { color: '#ff4444', label: 'Enemy' },
     neutral: { color: '#888888', label: 'Neutral' },
     friendly: { color: '#44ff44', label: 'Friendly' },
-    faction: { color: '#00FFFF', label: 'Alliance'},
+    faction: { color: '#00FFFF', label: 'Alliance' },
     family: { color: '#aa44ff', label: 'Family' },
     romantic: { color: '#ff69b4', label: 'Romantic' }
   };
@@ -63,25 +63,41 @@ class TreeViewer extends Application {
         treeId: this.treeId,
         nodes: [],
         connections: [],
-        connectionTypes: TreeViewer.CONNECTION_TYPES
+        connectionTypes: TreeViewer.CONNECTION_TYPES,
+        isGM: game.user.isGM
       };
       return this._data;
     }
 
     const enrichedNodes = tree.nodes?.map(node => {
-      const actor = game.actors.get(node.actorId);
-      const size = node.size || 80;
-      const fontSize = Math.max(10, Math.min(18, Math.round(size * 0.15)));
-      const nameMaxWidth = Math.max(80, size * 1.5);
-      
-      return {
-        ...node,
-        actorName: actor?.name || "Unknown",
-        actorImg: actor?.img || "icons/svg/mystery-man.svg",
-        size: size,
-        fontSize: fontSize,
-        nameMaxWidth: nameMaxWidth
-      };
+      if (node.isCustom) {
+        const size = node.size || 80;
+        const fontSize = Math.max(10, Math.min(18, Math.round(size * 0.15)));
+        const nameMaxWidth = Math.max(80, size * 1.5);
+        
+        return {
+          ...node,
+          actorName: node.customName || "Unknown",
+          actorImg: node.customImg || "icons/svg/mystery-man.svg",
+          size: size,
+          fontSize: fontSize,
+          nameMaxWidth: nameMaxWidth
+        };
+      } else {
+        const actor = game.actors.get(node.actorId);
+        const size = node.size || 80;
+        const fontSize = Math.max(10, Math.min(18, Math.round(size * 0.15)));
+        const nameMaxWidth = Math.max(80, size * 1.5);
+        
+        return {
+          ...node,
+          actorName: actor?.name || "Unknown",
+          actorImg: actor?.img || "icons/svg/mystery-man.svg",
+          size: size,
+          fontSize: fontSize,
+          nameMaxWidth: nameMaxWidth
+        };
+      }
     }) || [];
 
     const enrichedConnections = (tree.connections || []).map(conn => {
@@ -98,7 +114,8 @@ class TreeViewer extends Application {
       treeId: this.treeId,
       nodes: enrichedNodes,
       connections: enrichedConnections,
-      connectionTypes: TreeViewer.CONNECTION_TYPES
+      connectionTypes: TreeViewer.CONNECTION_TYPES,
+      isGM: game.user.isGM
     };
 
     return this._data;
@@ -154,7 +171,7 @@ class TreeViewer extends Application {
       tree.connections = [];
     }
 
-    const existingNode = tree.nodes.find(n => n.actorId === actor.id);
+    const existingNode = tree.nodes.find(n => n.actorId === actor.id && !n.isCustom);
     if (existingNode) {
       ui.notifications.warn(`${actor.name} is already in this tree`);
       return;
@@ -165,7 +182,8 @@ class TreeViewer extends Application {
       actorId: actor.id,
       x: x,
       y: y,
-      size: 80
+      size: 80,
+      isCustom: false
     };
 
     tree.nodes.push(newNode);
@@ -173,6 +191,409 @@ class TreeViewer extends Application {
     
     ui.notifications.info(`Added ${actor.name} to the tree`);
     this.render();
+  }
+
+  async _addCustomNode() {
+    const result = await Dialog.wait({
+      title: "Add Custom Node",
+      content: `
+        <form class="custom-node-form">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" name="nodeName" placeholder="Enter name..." autofocus />
+          </div>
+          <div class="form-group">
+            <label>Portrait:</label>
+            <div class="portrait-picker">
+              <img class="portrait-preview" src="icons/svg/mystery-man.svg" />
+              <button type="button" class="browse-portrait">
+                <i class="fas fa-file-image"></i> Browse
+              </button>
+            </div>
+            <input type="hidden" name="nodeImg" value="icons/svg/mystery-man.svg" />
+          </div>
+          <div class="form-group">
+            <label>Description (optional):</label>
+            <textarea name="nodeDescription" rows="3" placeholder="Enter description..."></textarea>
+          </div>
+        </form>
+        <style>
+          .custom-node-form .form-group {
+            margin-bottom: 1rem;
+          }
+          .custom-node-form label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: bold;
+          }
+          .custom-node-form input[type="text"],
+          .custom-node-form textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--color-border-dark);
+            border-radius: 4px;
+          }
+          .portrait-picker {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+          }
+          .portrait-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid var(--color-border-dark);
+            object-fit: cover;
+          }
+          .browse-portrait {
+            padding: 0.5rem 1rem;
+          }
+        </style>
+      `,
+      buttons: {
+        add: {
+          icon: '<i class="fas fa-plus"></i>',
+          label: "Add Node",
+          callback: (html) => {
+            return {
+              name: html.find('[name="nodeName"]').val(),
+              img: html.find('[name="nodeImg"]').val(),
+              description: html.find('[name="nodeDescription"]').val()
+            };
+          }
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: "Cancel",
+          callback: () => null
+        }
+      },
+      default: "add",
+      render: (html) => {
+        html.find('.browse-portrait').click(() => {
+          const fp = new FilePicker({
+            type: "image",
+            current: html.find('[name="nodeImg"]').val(),
+            callback: (path) => {
+              html.find('[name="nodeImg"]').val(path);
+              html.find('.portrait-preview').attr('src', path);
+            }
+          });
+          fp.render(true);
+        });
+      }
+    });
+
+    if (!result || !result.name) {
+      return;
+    }
+
+    const trees = await this._getTrees();
+    const tree = trees[this.treeId];
+    
+    if (!tree) {
+      ui.notifications.error("Tree not found");
+      return;
+    }
+
+    if (!tree.nodes) {
+      tree.nodes = [];
+    }
+
+    if (!tree.connections) {
+      tree.connections = [];
+    }
+
+    const canvasWidth = 800;
+    const canvasHeight = 600;
+    let x = canvasWidth / 2;
+    let y = canvasHeight / 2;
+    
+    const existingAtPosition = tree.nodes.filter(n => 
+      Math.abs(n.x - x) < 100 && Math.abs(n.y - y) < 100
+    );
+    if (existingAtPosition.length > 0) {
+      x += (existingAtPosition.length * 50);
+      y += (existingAtPosition.length * 30);
+    }
+
+    const newNode = {
+      id: foundry.utils.randomID(),
+      isCustom: true,
+      customName: result.name,
+      customImg: result.img,
+      customDescription: result.description,
+      x: x,
+      y: y,
+      size: 80
+    };
+
+    tree.nodes.push(newNode);
+    await this._saveTrees(trees);
+    
+    ui.notifications.info(`Added "${result.name}" to the tree`);
+    this.render();
+  }
+
+  async _editCustomNode(nodeId) {
+    const trees = await this._getTrees();
+    const tree = trees[this.treeId];
+    const node = tree.nodes.find(n => n.id === nodeId);
+    
+    if (!node || !node.isCustom) {
+      ui.notifications.error("Cannot edit this node");
+      return;
+    }
+
+    const result = await Dialog.wait({
+      title: "Edit Custom Node",
+      content: `
+        <form class="custom-node-form">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" name="nodeName" value="${node.customName || ''}" autofocus />
+          </div>
+          <div class="form-group">
+            <label>Portrait:</label>
+            <div class="portrait-picker">
+              <img class="portrait-preview" src="${node.customImg || 'icons/svg/mystery-man.svg'}" />
+              <button type="button" class="browse-portrait">
+                <i class="fas fa-file-image"></i> Browse
+              </button>
+            </div>
+            <input type="hidden" name="nodeImg" value="${node.customImg || 'icons/svg/mystery-man.svg'}" />
+          </div>
+          <div class="form-group">
+            <label>Description (optional):</label>
+            <textarea name="nodeDescription" rows="3">${node.customDescription || ''}</textarea>
+          </div>
+        </form>
+        <style>
+          .custom-node-form .form-group {
+            margin-bottom: 1rem;
+          }
+          .custom-node-form label {
+            display: block;
+            margin-bottom: 0.25rem;
+            font-weight: bold;
+          }
+          .custom-node-form input[type="text"],
+          .custom-node-form textarea {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid var(--color-border-dark);
+            border-radius: 4px;
+          }
+          .portrait-picker {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+          }
+          .portrait-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 2px solid var(--color-border-dark);
+            object-fit: cover;
+          }
+          .browse-portrait {
+            padding: 0.5rem 1rem;
+          }
+        </style>
+      `,
+      buttons: {
+        save: {
+          icon: '<i class="fas fa-save"></i>',
+          label: "Save",
+          callback: (html) => {
+            return {
+              name: html.find('[name="nodeName"]').val(),
+              img: html.find('[name="nodeImg"]').val(),
+              description: html.find('[name="nodeDescription"]').val()
+            };
+          }
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: "Cancel",
+          callback: () => null
+        }
+      },
+      default: "save",
+      render: (html) => {
+        html.find('.browse-portrait').click(() => {
+          const fp = new FilePicker({
+            type: "image",
+            current: html.find('[name="nodeImg"]').val(),
+            callback: (path) => {
+              html.find('[name="nodeImg"]').val(path);
+              html.find('.portrait-preview').attr('src', path);
+            }
+          });
+          fp.render(true);
+        });
+      }
+    });
+
+    if (!result) {
+      return;
+    }
+
+    node.customName = result.name || node.customName;
+    node.customImg = result.img || node.customImg;
+    node.customDescription = result.description;
+    
+    await this._saveTrees(trees);
+    ui.notifications.info(`Updated "${node.customName}"`);
+    this.render();
+  }
+
+  // Show tree to all players
+  async _showToPlayers() {
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can show trees to players");
+      return;
+    }
+    
+    const trees = await this._getTrees();
+    const tree = trees[this.treeId];
+    
+    if (!tree) {
+      ui.notifications.error("Tree not found");
+      return;
+    }
+    
+    // Emit socket event to all players
+    game.socket.emit('module.ironic-relational-tree', {
+      action: 'showTree',
+      treeId: this.treeId
+    });
+    
+    // Just notify, don't open another window (GM already has it open)
+    ui.notifications.info(`Showing "${tree.name}" to all players`);
+  }
+
+  // Add as map note
+  async _addMapNote() {
+    if (!game.user.isGM) {
+      ui.notifications.warn("Only the GM can add map notes");
+      return;
+    }
+
+    if (!canvas.scene) {
+      ui.notifications.warn("No active scene to add a note to");
+      return;
+    }
+
+    const trees = await this._getTrees();
+    const tree = trees[this.treeId];
+    
+    if (!tree) {
+      ui.notifications.error("Tree not found");
+      return;
+    }
+
+    // Create or get a journal entry for this tree
+    let journal = game.journal.getName(`Tree: ${tree.name}`);
+    
+    if (!journal) {
+      journal = await JournalEntry.create({
+        name: `Tree: ${tree.name}`,
+        folder: null
+      });
+      
+      // Add a page with instructions
+      await journal.createEmbeddedDocuments("JournalEntryPage", [{
+        name: tree.name,
+        type: "text",
+        text: { 
+          content: `<p>This journal entry links to the relational tree: <strong>${tree.name}</strong></p>
+                    <p><em>Double-click this note to open the tree viewer.</em></p>
+                    <p data-tree-id="${this.treeId}" class="tree-link-data"></p>` 
+        }
+      }]);
+    }
+
+    // Prompt for note placement
+    const result = await Dialog.wait({
+      title: "Add Map Note",
+      content: `
+        <form>
+          <p>Click on the map to place the note, or enter coordinates:</p>
+          <div class="form-group">
+            <label>X Position:</label>
+            <input type="number" name="noteX" value="${canvas.scene.width / 2}" />
+          </div>
+          <div class="form-group">
+            <label>Y Position:</label>
+            <input type="number" name="noteY" value="${canvas.scene.height / 2}" />
+          </div>
+          <div class="form-group">
+            <label>Icon:</label>
+            <div class="icon-picker">
+              <img class="icon-preview" src="icons/svg/book.svg" style="width: 40px; height: 40px;" />
+              <button type="button" class="browse-icon">
+                <i class="fas fa-file-image"></i> Browse
+              </button>
+            </div>
+            <input type="hidden" name="noteIcon" value="icons/svg/book.svg" />
+          </div>
+        </form>
+      `,
+      buttons: {
+        create: {
+          icon: '<i class="fas fa-map-marker-alt"></i>',
+          label: "Create Note",
+          callback: (html) => {
+            return {
+              x: parseInt(html.find('[name="noteX"]').val()),
+              y: parseInt(html.find('[name="noteY"]').val()),
+              icon: html.find('[name="noteIcon"]').val()
+            };
+          }
+        },
+        cancel: {
+          icon: '<i class="fas fa-times"></i>',
+          label: "Cancel",
+          callback: () => null
+        }
+      },
+      default: "create",
+      render: (html) => {
+        html.find('.browse-icon').click(() => {
+          const fp = new FilePicker({
+            type: "image",
+            current: html.find('[name="noteIcon"]').val(),
+            callback: (path) => {
+              html.find('[name="noteIcon"]').val(path);
+              html.find('.icon-preview').attr('src', path);
+            }
+          });
+          fp.render(true);
+        });
+      }
+    });
+
+    if (!result) return;
+
+    // Create the note on the canvas
+    await canvas.scene.createEmbeddedDocuments("Note", [{
+      entryId: journal.id,
+      x: result.x,
+      y: result.y,
+      iconSize: 40,
+      texture: {
+        src: result.icon
+      },
+      text: tree.name,
+      flags: {
+        'ironic-relational-tree': {
+          treeId: this.treeId
+        }
+      }
+    }]);
+
+    ui.notifications.info(`Added map note for "${tree.name}"`);
   }
 
   activateListeners(html) {
@@ -209,6 +630,21 @@ class TreeViewer extends Application {
       }, 50);
     }
 
+    // Add custom node button
+    html.find('.add-custom-node').click(() => {
+      this._addCustomNode();
+    });
+
+    // Show to players button (GM only)
+    html.find('.show-to-players').click(() => {
+      this._showToPlayers();
+    });
+
+    // Add map note button (GM only)
+    html.find('.add-map-note').click(() => {
+      this._addMapNote();
+    });
+
     // Remove node button
     html.find('.remove-node').click((event) => {
       event.stopPropagation();
@@ -217,12 +653,19 @@ class TreeViewer extends Application {
       this._removeNode(nodeId);
     });
 
-    // Connect node button - shows connection type picker
+    // Edit custom node button
+    html.find('.edit-node').click((event) => {
+      event.stopPropagation();
+      event.preventDefault();
+      const nodeId = $(event.currentTarget).closest('.tree-node').data('node-id');
+      this._editCustomNode(nodeId);
+    });
+
+    // Connect node button
     html.find('.connect-node').on('click', (event) => {
       event.stopImmediatePropagation();
       event.preventDefault();
       
-      // Remove any existing picker first
       $(this.element).find('.connection-type-picker').remove();
       
       const nodeId = $(event.currentTarget).closest('.tree-node').data('node-id');
@@ -231,7 +674,6 @@ class TreeViewer extends Application {
 
     // Click on node to complete connection
     html.find('.tree-node').on('click', (event) => {
-      // Ignore if clicking on a button
       if ($(event.target).closest('button').length) {
         return;
       }
@@ -305,61 +747,59 @@ class TreeViewer extends Application {
   }
 
   _showConnectionTypePicker(event, nodeId, html) {
-  if (this.connectingFrom === nodeId) {
-    this.connectingFrom = null;
-    html.find('.tree-node').removeClass('connecting');
-    ui.notifications.info("Connection cancelled");
-    return;
+    if (this.connectingFrom === nodeId) {
+      this.connectingFrom = null;
+      html.find('.tree-node').removeClass('connecting');
+      ui.notifications.info("Connection cancelled");
+      return;
+    }
+
+    const picker = $(`
+      <div class="connection-type-picker">
+        <div class="picker-title">Select Relationship Type</div>
+        ${Object.entries(TreeViewer.CONNECTION_TYPES).map(([key, value]) => `
+          <button class="picker-option" data-type="${key}">
+            <span class="color-indicator" style="background-color: ${value.color};"></span>
+            ${value.label}
+          </button>
+        `).join('')}
+        <button class="picker-cancel">Cancel</button>
+      </div>
+    `);
+
+    const nodeEl = $(event.currentTarget).closest('.tree-node')[0];
+    const nodeRect = nodeEl.getBoundingClientRect();
+    const containerRect = this.element[0].getBoundingClientRect();
+    
+    picker.css({
+      position: 'absolute',
+      left: (nodeRect.right - containerRect.left + 10) + 'px',
+      top: (nodeRect.top - containerRect.top) + 'px',
+      zIndex: 1000
+    });
+
+    $(this.element).find('.window-content').append(picker);
+
+    picker.find('.picker-option').on('click', (e) => {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      const type = $(e.currentTarget).data('type');
+      this.connectionType = type;
+      this.connectingFrom = nodeId;
+      
+      html.find(`[data-node-id="${nodeId}"]`).addClass('connecting');
+      picker.remove();
+      
+      const typeLabel = TreeViewer.CONNECTION_TYPES[type].label;
+      ui.notifications.info(`Creating ${typeLabel} connection. Click another node to connect.`);
+    });
+
+    picker.find('.picker-cancel').on('click', (e) => {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      picker.remove();
+    });
   }
-
-  const picker = $(`
-    <div class="connection-type-picker">
-      <div class="picker-title">Select Relationship Type</div>
-      ${Object.entries(TreeViewer.CONNECTION_TYPES).map(([key, value]) => `
-        <button class="picker-option" data-type="${key}">
-          <span class="color-indicator" style="background-color: ${value.color};"></span>
-          ${value.label}
-        </button>
-      `).join('')}
-      <button class="picker-cancel">Cancel</button>
-    </div>
-  `);
-
-  // Get the node element for positioning
-  const nodeEl = $(event.currentTarget).closest('.tree-node')[0];
-  const nodeRect = nodeEl.getBoundingClientRect();
-  const containerRect = this.element[0].getBoundingClientRect();
-  
-  // Position to the right of the node with some offset
-  picker.css({
-    position: 'absolute',
-    left: (nodeRect.right - containerRect.left + 10) + 'px',  // 10px to the right of the node
-    top: (nodeRect.top - containerRect.top) + 'px',
-    zIndex: 1000
-  });
-
-  $(this.element).find('.window-content').append(picker);
-
-  picker.find('.picker-option').on('click', (e) => {
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    const type = $(e.currentTarget).data('type');
-    this.connectionType = type;
-    this.connectingFrom = nodeId;
-    
-    html.find(`[data-node-id="${nodeId}"]`).addClass('connecting');
-    picker.remove();
-    
-    const typeLabel = TreeViewer.CONNECTION_TYPES[type].label;
-    ui.notifications.info(`Creating ${typeLabel} connection. Click another node to connect.`);
-  });
-
-  picker.find('.picker-cancel').on('click', (e) => {
-    e.stopImmediatePropagation();
-    e.preventDefault();
-    picker.remove();
-  });
-}
 
   _showConnectionEditMenu(event, fromId, toId) {
     $(this.element).find('.connection-edit-menu').remove();
@@ -571,7 +1011,6 @@ class TreeViewer extends Application {
       }
     });
 
-    // Re-setup click handlers after redrawing
     this._setupConnectionLineHandlers(svg);
   }
 
@@ -635,3 +1074,20 @@ class TreeViewer extends Application {
     this.render();
   }
 }
+
+
+// Hook for opening tree from map note - add this to your module
+Hooks.on('renderJournalSheet', (app, html, data) => {
+  const treeLink = html.find('.tree-link-data');
+  if (treeLink.length) {
+    const treeId = treeLink.data('tree-id');
+    if (treeId) {
+      // Add a button to open the tree
+      const button = $(`<button class="open-tree-btn"><i class="fas fa-project-diagram"></i> Open Tree</button>`);
+      button.click(() => {
+        new TreeViewer(treeId).render(true);
+      });
+      treeLink.replaceWith(button);
+    }
+  }
+});

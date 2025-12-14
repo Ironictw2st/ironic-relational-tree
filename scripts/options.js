@@ -27,3 +27,17 @@ Hooks.on('renderSceneControls', (controls, html, data) => {
   });
 });
 
+Hooks.once('ready', () => {
+  // Prevent duplicate registration during hot-reloads
+  const module = game.modules.get('ironic-relational-tree');
+  if (module.socketRegistered) return;
+  module.socketRegistered = true;
+
+  game.socket.on('module.ironic-relational-tree', (data) => {
+    if (game.user.isGM) return;
+    
+    if (data.action === 'showTree') {
+      new TreeViewer(data.treeId).render(true);
+    }
+  });
+});
