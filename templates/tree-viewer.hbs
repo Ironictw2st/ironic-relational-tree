@@ -1,0 +1,324 @@
+<div class="tree-viewer-header">
+  <button class="back-to-list"><i class="fas fa-arrow-left"></i> Back to List</button>
+  <h2>{{tree.name}}</h2>
+  <div class="help-text">Drag actors from the sidebar onto the canvas</div>
+</div>
+
+<div class="tree-canvas" style="min-height: 600px;">
+  <svg class="connection-layer" width="100%" height="100%"></svg>
+  
+  <!-- Legend -->
+  <div class="tree-legend">
+    <div class="legend-title">Relationships</div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #ff4444;"></span>
+      <span class="legend-label">Enemy</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #888888;"></span>
+      <span class="legend-label">Neutral</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #44ff44;"></span>
+      <span class="legend-label">Friendly</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #aa44ff;"></span>
+      <span class="legend-label">Family</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #ff69b4;"></span>
+      <span class="legend-label">Romantic</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #800000;"></span>
+      <span class="legend-label">Rival</span>
+    </div>
+    <div class="legend-item">
+      <span class="legend-line" style="background-color: #00FFFF;"></span>
+      <span class="legend-label">Alliance</span>
+    </div>
+  </div>
+  
+  {{#each nodes}}
+  <div class="tree-node" data-node-id="{{this.id}}" style="left: {{this.x}}px; top: {{this.y}}px;">
+    <div class="node-controls">
+      <button class="remove-node" title="Remove"><i class="fas fa-times"></i></button>
+      <button class="connect-node" title="Connect"><i class="fas fa-link"></i></button>
+      <button class="resize-larger" title="Larger"><i class="fas fa-plus"></i></button>
+      <button class="resize-smaller" title="Smaller"><i class="fas fa-minus"></i></button>
+    </div>
+    <img src="{{this.actorImg}}" alt="{{this.actorName}}" style="width: {{this.size}}px; height: {{this.size}}px;" />
+    <span class="actor-name" style="font-size: {{this.fontSize}}px; max-width: {{this.nameMaxWidth}}px;">{{this.actorName}}</span>
+  </div>
+  {{/each}}
+</div>
+
+<style>
+.tree-viewer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--color-border-dark);
+  gap: 1rem;
+}
+
+.help-text {
+  color: var(--color-text-dark-secondary);
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+.tree-canvas {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background: var(--color-bg-option);
+  border: 1px solid var(--color-border-dark);
+  overflow: auto;
+}
+
+.connection-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+  overflow: visible;
+}
+
+.connection-line {
+  stroke-width: 3;
+  pointer-events: all;
+  cursor: pointer;
+  fill: none;
+}
+
+.connection-line:hover {
+  stroke-width: 5;
+  filter: brightness(1.3);
+}
+
+/* Legend */
+.tree-legend {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--color-bg-btn);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 6px;
+  padding: 0.5rem;
+  z-index: 100;
+  min-width: 120px;
+}
+
+.tree-legend .legend-title {
+  font-weight: bold;
+  font-size: 0.9em;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-dark);
+}
+
+.tree-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-size: 0.85em;
+}
+
+.tree-legend .legend-line {
+  width: 20px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.tree-legend .legend-label {
+  color: var(--color-text-dark-primary);
+}
+
+/* Nodes */
+.tree-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.5rem;
+  background: var(--color-bg-btn);
+  border-radius: 8px;
+  cursor: move;
+  z-index: 10;
+  user-select: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.tree-node.dragging {
+  opacity: 0.7;
+  z-index: 100;
+}
+
+.tree-node.connecting {
+  border-color: var(--color-text-hyperlink);
+  box-shadow: 0 0 10px var(--color-text-hyperlink);
+  cursor: pointer;
+}
+
+.tree-node.hover {
+    border-color: var(--color-border-highlight); 
+
+}
+
+.node-controls {
+  position: absolute;
+  top: -30px;
+  display: flex;
+  gap: 0.25rem;
+  background: var(--color-bg-btn);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 4px;
+  padding: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tree-node:hover .node-controls {
+  opacity: 1;
+}
+
+.node-controls button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.8em;
+}
+
+.tree-node img {
+  border-radius: 50%;
+  border: 2px solid var(--color-border-dark);
+  object-fit: cover;
+}
+
+.actor-name {
+  margin-top: 0.5rem;
+  font-weight: bold;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Connection Type Picker */
+.connection-type-picker {
+  background: var(--color-bg-btn);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 6px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 150px;
+}
+
+.connection-type-picker .picker-title {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-dark);
+  font-size: 0.9em;
+}
+
+.connection-type-picker .picker-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  margin: 0.25rem 0;
+  text-align: left;
+  background: var(--color-bg-option);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.connection-type-picker .picker-option:hover {
+  background: var(--color-bg-option-hover);
+}
+
+.connection-type-picker .picker-cancel {
+  display: block;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  background: transparent;
+  border: 1px solid var(--color-border-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--color-text-dark-secondary);
+}
+
+/* Connection Edit Menu */
+.connection-edit-menu {
+  background: var(--color-bg-btn);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 6px;
+  padding: 0.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  min-width: 160px;
+}
+
+.connection-edit-menu .menu-title {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--color-border-dark);
+  font-size: 0.9em;
+}
+
+.connection-edit-menu .menu-section {
+  font-size: 0.85em;
+  color: var(--color-text-dark-secondary);
+  margin: 0.5rem 0 0.25rem 0;
+}
+
+.connection-edit-menu .menu-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  margin: 0.25rem 0;
+  text-align: left;
+  background: var(--color-bg-option);
+  border: 1px solid var(--color-border-dark);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.connection-edit-menu .menu-option:hover {
+  background: var(--color-bg-option-hover);
+}
+
+.connection-edit-menu .delete-connection {
+  color: #ff4444;
+}
+
+.connection-edit-menu hr {
+  border: none;
+  border-top: 1px solid var(--color-border-dark);
+  margin: 0.5rem 0;
+}
+
+/* Color indicator for menus */
+.color-indicator {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+</style>

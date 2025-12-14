@@ -1,0 +1,36 @@
+{
+  "id": "ironic-relational-tree",
+  "title": "Ironic's Relational Tree",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13"
+  },
+  "authors": [
+    {
+      "name": "Ironic",
+      "discord": "ironic._.",
+      "flags": {}
+    }
+  ],
+  "flags": {
+    "canUpload": true
+  },
+  "scripts": [
+    "scripts/settings.js",
+    "scripts/relational_tree_browsers.js",
+    "scripts/tree_list.js",
+    "scripts/tree_view.js",
+    "scripts/options.js"
+  ],
+  "relationships": {
+    "requires": [
+      {
+        "id": "ironic-dc-checks",
+        "type": "module",
+        "compatibility": {}
+      }
+    ]
+  },
+  "description": ""
+}
